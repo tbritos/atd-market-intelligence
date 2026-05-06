@@ -1,0 +1,661 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Region {
+  NORTE
+  NORDESTE
+  CENTRO_OESTE
+  SUDESTE
+  SUL
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum DealerGroupQueue {
+  BLOCKED_CRM
+  APOLLO_READY
+  HUNTER_FALLBACK
+  REVIEW
+}
+
+enum DealerGroupConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DealerGroupCrmStatus {
+  NOT_FOUND
+  LEAD
+  DEAL_ATIVO
+  CLIENTE
+}
+
+enum DealerGroupEnrichmentSource {
+  PIPEDRIVE
+  APOLLO
+  HUNTER
+  WEBSITE
+  MANUAL
+}
+
+enum DealerGroupRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model Brand {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  // Métricas consolidadas
+  avgPerformanceScore Float?    @map("avg_performance_score")
+  avgSeoScore         Float?    @map("avg_seo_score")
+  avgResponseTime     Int?      @map("avg_response_time")
+  totalWebsites       Int?      @default(0) @map("total_websites")
+  activeWebsites      Int?      @default(0) @map("active_websites")
+  metricsUpdatedAt    DateTime? @map("metrics_updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stores       Store[]
+  dealerGroups DealerGroup[]
+  websites     Website[]
+  searchJobs   SearchJob[]
+
+  @@map("brands")
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  stores Store[]
+
+  @@map("groups")
+}
+
+model State {
+  id        String   @id @default(uuid())
+  ibgeCode  Int      @unique @map("ibge_code")
+  code      String   @unique
+  name      String   @unique
+  latitude  Float?
+  longitude Float?
+  region    Region
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cities     City[]
+  stores     Store[]
+  searchJobs SearchJob[]
+
+  @@map("states")
+}
+
+model City {
+  id        String   @id @default(uuid())
+  ibgeCode  Int      @unique @map("ibge_code")
+  name      String
+  latitude  Float?
+  longitude Float?
+  isCapital Boolean  @default(false) @map("is_capital")
+  stateId   String   @map("state_id")
+  ddd       Int?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  state  State   @relation(fields: [stateId], references: [id])
+  stores Store[]
+
+  @@unique([name, stateId])
+  @@map("cities")
+}
+
+model WebsiteProvider {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  avgPerformanceScore Float? @map("avg_performance_score")
+  avgDowntimeSeconds  Int?   @default(0) @map("downtime_seconds")
+  avgSeoScore         Float? @map("avg_seo_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  websites Website[]
+
+  @@map("website_providers")
+}
+
+model Website {
+  id         String  @id @default(uuid())
+  url        String  @unique
+  providerId String? @map("provider_id")
+  brandId    String  @map("brand_id")
+  isActive   Boolean @default(true) @map("is_active")
+
+  trafficSocial        Int?   @default(0) @map("traffic_social")
+  trafficPaidReferrals Int?   @default(0) @map("traffic_paid_referrals")
+  trafficMail          Int?   @default(0) @map("traffic_mail")
+  trafficReferrals     Int?   @default(0) @map("traffic_referrals")
+  trafficSearch        Int?   @default(0) @map("traffic_search")
+  trafficDirect        Int?   @default(0) @map("traffic_direct")
+  avgPerformanceScore  Float? @map("avg_performance_score")
+  avgMonthlyVisits     Int?   @map("avg_monthly_visits")
+  avgResponseTime      Int?   @map("avg_response_time")
+  downtimeSeconds      Int?   @default(0) @map("downtime_seconds")
+  seoScore             Float? @map("seo_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  provider WebsiteProvider? @relation(fields: [providerId], references: [id])
+  brand    Brand            @relation(fields: [brandId], references: [id])
+
+  stores             Store[]
+  performanceMetrics PerformanceMetric[]
+  seoMetrics         SeoMetric[]
+  uptimeMetrics      UptimeMetric[]
+  trafficMetrics     TrafficMetric[]
+
+  @@map("websites")
+}
+
+model Store {
+  id            String  @id @default(uuid())
+  name          String
+  brandId       String  @map("brand_id")
+  groupId       String  @map("group_id")
+  dealerGroupId String? @map("dealer_group_id")
+  stateId       String  @map("state_id")
+  cityId        String? @map("city_id")
+  websiteId     String? @map("website_id")
+  latitude      Float?
+  longitude     Float?
+  rating        Float?
+  reviews       Int?
+  phone         String?
+  isActive      Boolean @default(true) @map("is_active")
+
+  // Dados CNPJ (Receita Federal via BrasilAPI)
+  cnpj               String?
+  razaoSocial        String?   @map("razao_social")
+  nomeFantasia       String?   @map("nome_fantasia")
+  dataAbertura       DateTime? @map("data_abertura")
+  porte              String?
+  capitalSocial      Float?    @map("capital_social")
+  situacaoCadastral  String?   @map("situacao_cadastral")
+  cnaeCode           String?   @map("cnae_code")
+  cnaeDescricao      String?   @map("cnae_descricao")
+  emailReceita       String?   @map("email_receita")
+  telefoneReceita    String?   @map("telefone_receita")
+  enderecoLogradouro String?   @map("endereco_logradouro")
+  enderecoNumero     String?   @map("endereco_numero")
+  enderecoBairro     String?   @map("endereco_bairro")
+  enderecoCep        String?   @map("endereco_cep")
+  cnpjEnrichedAt     DateTime? @map("cnpj_enriched_at")
+
+  // Contatos (scraping do site)
+  whatsapp         String?
+  email            String?
+  facebook         String?
+  instagram        String?
+  youtube          String?
+  linkedin         String?
+  contactScrapedAt DateTime? @map("contact_scraped_at")
+
+  // Matriz / Filial
+  tipo String? // "Matriz" ou "Filial"
+
+  // Status comercial
+  clienteAutoforce Boolean @default(false) @map("cliente_autoforce")
+  csResponsavel    String? @map("cs_responsavel")
+
+  // Contato do decisor (importado de planilhas)
+  contactName     String? @map("contact_name")
+  contactLastName String? @map("contact_last_name")
+  contactRole     String? @map("contact_role")
+  contactEmail    String? @map("contact_email")
+  contactPhone    String? @map("contact_phone")
+
+  // Validação do site
+  siteUp        Boolean?  @map("site_up")         // site responde HTTP?
+  siteNameOk    Boolean?  @map("site_name_ok")    // nome da concessionária aparece no site?
+  siteCheckedAt DateTime? @map("site_checked_at") // quando foi verificado
+
+  // Enriquecimento Apollo/Hunter
+  enrichmentStatus   String?   @default("pending") @map("enrichment_status") // pending | running | done | skipped | error
+  enrichmentError    String?   @map("enrichment_error")
+  apolloOrgId        String?   @map("apollo_org_id")
+  apolloEnrichedAt   DateTime? @map("apollo_enriched_at")
+  hunterEnrichedAt   DateTime? @map("hunter_enriched_at")
+
+  // Discovery metadata
+  discoverySource  String?   @default("google_maps") @map("discovery_source")
+  externalId       String?   @map("external_id")
+  openingHours     Json?     @map("opening_hours")
+  services         Json?
+  lastDiscoveredAt DateTime? @map("last_discovered_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  brand          Brand                @relation(fields: [brandId], references: [id])
+  group          Group                @relation(fields: [groupId], references: [id])
+  dealerGroup    DealerGroup?         @relation("DealerGroupStores", fields: [dealerGroupId], references: [id])
+  state          State                @relation(fields: [stateId], references: [id])
+  city           City?                @relation(fields: [cityId], references: [id])
+  website        Website?             @relation(fields: [websiteId], references: [id])
+  partners       StorePartner[]
+  importUpdates  ImportUpdate[]
+  dealerContacts DealerGroupContact[]
+
+  @@index([dealerGroupId])
+  @@map("stores")
+}
+
+model DealerGroup {
+  id              String  @id @default(uuid())
+  brandId         String  @map("brand_id")
+  domain          String
+  websiteUrl      String? @map("website_url")
+  providerName    String? @map("provider_name")
+  bucket          String?
+  storeCount      Int     @default(0) @map("store_count")
+  storesWithPhone Int     @default(0) @map("stores_with_phone")
+  states          Json?
+  cities          Json?
+
+  crmStatus            DealerGroupCrmStatus @default(NOT_FOUND) @map("crm_status")
+  crmOrgId             Int?                 @map("crm_org_id")
+  crmOrgName           String?              @map("crm_org_name")
+  crmOrgWebsite        String?              @map("crm_org_website")
+  crmCity              String?              @map("crm_city")
+  crmDealId            Int?                 @map("crm_deal_id")
+  crmDealStage         String?              @map("crm_deal_stage")
+  crmOwnerName         String?              @map("crm_owner_name")
+  crmMatchedTerm       String?              @map("crm_matched_term")
+  lastPipedriveCheckAt DateTime?            @map("last_pipedrive_check_at")
+
+  queue         DealerGroupQueue      @default(REVIEW)
+  priorityScore Int                   @default(0) @map("priority_score")
+  confidence    DealerGroupConfidence @default(MEDIUM)
+  reasons       Json?
+
+  apolloStatus           DealerGroupRunStatus @default(PENDING) @map("apollo_status")
+  apolloMode             String?              @map("apollo_mode")
+  apolloOrgId            String?              @map("apollo_org_id")
+  apolloOrgName          String?              @map("apollo_org_name")
+  apolloDomain           String?              @map("apollo_domain")
+  apolloPhone            String?              @map("apollo_phone")
+  apolloLinkedinUrl      String?              @map("apollo_linkedin_url")
+  apolloCity             String?              @map("apollo_city")
+  apolloState            String?              @map("apollo_state")
+  apolloEmployeeCount    Int?                 @map("apollo_employee_count")
+  apolloKeywords         Json?                @map("apollo_keywords")
+  apolloTechnologies     Json?                @map("apollo_technologies")
+  apolloOrgQueryTerms    Json?                @map("apollo_org_query_terms")
+  apolloPeopleQueryTerms Json?                @map("apollo_people_query_terms")
+  apolloTitleHints       Json?                @map("apollo_title_hints")
+  lastApolloCheckAt      DateTime?            @map("last_apollo_check_at")
+
+  hunterStatus           DealerGroupRunStatus @default(PENDING) @map("hunter_status")
+  hunterMode             String?              @map("hunter_mode")
+  hunterDomain           String?              @map("hunter_domain")
+  hunterEmailPattern     String?              @map("hunter_email_pattern")
+  hunterFinderCandidates Json?                @map("hunter_finder_candidates")
+  lastHunterCheckAt      DateTime?            @map("last_hunter_check_at")
+
+  lastErrorSource  DealerGroupEnrichmentSource? @map("last_error_source")
+  lastErrorMessage String?                      @map("last_error_message")
+  readyForSdr      Boolean                      @default(false) @map("ready_for_sdr")
+  exportNotes      String?                      @map("export_notes")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  brand    Brand                @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  stores   Store[]              @relation("DealerGroupStores")
+  contacts DealerGroupContact[]
+  runs     DealerGroupRun[]
+
+  @@unique([brandId, domain])
+  @@index([brandId, queue, priorityScore])
+  @@index([crmStatus, readyForSdr])
+  @@map("dealer_groups")
+}
+
+model DealerGroupContact {
+  id              String                      @id @default(uuid())
+  dealerGroupId   String                      @map("dealer_group_id")
+  storeId         String?                     @map("store_id")
+  source          DealerGroupEnrichmentSource
+  externalId      String?                     @map("external_id")
+  fullName        String?                     @map("full_name")
+  firstName       String?                     @map("first_name")
+  lastName        String?                     @map("last_name")
+  title           String?
+  seniority       String?
+  department      String?
+  email           String?
+  emailStatus     String?                     @map("email_status")
+  emailConfidence Int?                        @map("email_confidence")
+  phone           String?
+  linkedinUrl     String?                     @map("linkedin_url")
+  city            String?
+  state           String?
+  isDecisionMaker Boolean                     @default(false) @map("is_decision_maker")
+  isPrimary       Boolean                     @default(false) @map("is_primary")
+  rawPayload      Json?                       @map("raw_payload")
+  createdAt       DateTime                    @default(now()) @map("created_at")
+  updatedAt       DateTime                    @updatedAt @map("updated_at")
+
+  dealerGroup DealerGroup @relation(fields: [dealerGroupId], references: [id], onDelete: Cascade)
+  store       Store?      @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@unique([dealerGroupId, source, externalId])
+  @@index([dealerGroupId, source])
+  @@index([email])
+  @@map("dealer_group_contacts")
+}
+
+model DealerGroupRun {
+  id              String                      @id @default(uuid())
+  dealerGroupId   String                      @map("dealer_group_id")
+  source          DealerGroupEnrichmentSource
+  status          DealerGroupRunStatus        @default(PENDING)
+  creditsUsed     Int?                        @map("credits_used")
+  requestedAt     DateTime                    @default(now()) @map("requested_at")
+  completedAt     DateTime?                   @map("completed_at")
+  requestPayload  Json?                       @map("request_payload")
+  responsePayload Json?                       @map("response_payload")
+  errorMessage    String?                     @map("error_message")
+  createdAt       DateTime                    @default(now()) @map("created_at")
+  updatedAt       DateTime                    @updatedAt @map("updated_at")
+
+  dealerGroup DealerGroup @relation(fields: [dealerGroupId], references: [id], onDelete: Cascade)
+
+  @@index([dealerGroupId, source, requestedAt])
+  @@index([source, status])
+  @@map("dealer_group_runs")
+}
+
+model ImportJob {
+  id          String   @id @default(uuid())
+  filename    String
+  source      String // 'rd_station', 'manual', 'google_sheets', etc.
+  totalRows   Int      @default(0) @map("total_rows")
+  matchedRows Int      @default(0) @map("matched_rows")
+  updatedRows Int      @default(0) @map("updated_rows")
+  skippedRows Int      @default(0) @map("skipped_rows")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  updates ImportUpdate[]
+
+  @@map("import_jobs")
+}
+
+model ImportUpdate {
+  id          String   @id @default(uuid())
+  importJobId String   @map("import_job_id")
+  storeId     String   @map("store_id")
+  field       String
+  oldValue    String?  @map("old_value")
+  newValue    String   @map("new_value")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("import_updates")
+}
+
+model StorePartner {
+  id              String   @id @default(uuid())
+  storeId         String   @map("store_id")
+  nome            String
+  cpfMascarado    String?  @map("cpf_mascarado")
+  qualificacao    String?
+  email           String?
+  emailStatus     String?  @map("email_status")    // verified, unverified, bounced
+  emailConfidence Int?     @map("email_confidence") // 0-100 (Hunter)
+  phone           String?
+  linkedinUrl     String?  @map("linkedin_url")
+  apolloPersonId  String?  @map("apollo_person_id")
+  apolloHasPhone  Boolean? @map("apollo_has_phone")
+  apolloPhoneRevealRequestedAt DateTime? @map("apollo_phone_reveal_requested_at")
+  apolloPhoneRevealedAt DateTime? @map("apollo_phone_revealed_at")
+  apolloPhoneRevealError String? @map("apollo_phone_reveal_error")
+  source          String?  // apollo, hunter, receita
+
+  enrichLayerEnrichedAt   DateTime? @map("enrich_layer_enriched_at")
+  enrichLayerRawPayload   Json?     @map("enrich_layer_raw_payload")
+  enrichLayerNumbers      String[]  @map("enrich_layer_numbers")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, nome])
+  @@map("store_partners")
+}
+
+model PerformanceMetric {
+  id          String   @id @default(uuid())
+  websiteId   String   @map("website_id")
+  mobileScore Int?     @map("mobile_score")
+  measuredAt  DateTime @default(now()) @map("measured_at")
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, measuredAt])
+  @@map("performance_metrics")
+}
+
+model SeoMetric {
+  id          String   @id @default(uuid())
+  websiteId   String   @map("website_id")
+  mobileScore Int?     @map("mobile_score")
+  measuredAt  DateTime @default(now()) @map("measured_at")
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, measuredAt])
+  @@map("seo_metrics")
+}
+
+model UptimeMetric {
+  id           String   @id @default(uuid())
+  websiteId    String   @map("website_id")
+  isUp         Boolean  @map("is_up")
+  responseTime Int?     @map("response_time")
+  statusCode   Int?     @map("status_code")
+  errorMessage String?  @map("error_message")
+  measuredAt   DateTime @default(now()) @map("measured_at")
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, measuredAt])
+  @@map("uptime_metrics")
+}
+
+model TrafficMetric {
+  id            String   @id @default(uuid())
+  websiteId     String   @map("website_id")
+  monthlyVisits Int?     @map("monthly_visits")
+  estimatedAt   DateTime @default(now()) @map("estimated_at")
+  source        String?
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, estimatedAt])
+  @@map("traffic_metrics")
+}
+
+// ─── Amostra de Leads ────────────────────────────────────────────────────────
+
+model AmostraLead {
+  id String @id @default(uuid())
+
+  // Dados originais da planilha
+  email            String?
+  nome             String?
+  telefone         String?
+  celular          String?
+  cargo            String?
+  empresa          String
+  site             String?
+  plataformaDoSite String? @map("plataforma_do_site")
+
+  // Status do pipeline geral: pending | running | done | error
+  statusPipeline String @default("pending") @map("status_pipeline")
+
+  // Status por etapa: pending | running | done | error | skipped | not_found
+  statusPipedrive String @default("pending") @map("status_pipedrive")
+  statusSerpapi   String @default("pending") @map("status_serpapi")
+  statusScrape    String @default("pending") @map("status_scrape")
+  statusApollo    String @default("pending") @map("status_apollo")
+  statusApify     String @default("pending") @map("status_apify")
+  statusHunter    String @default("pending") @map("status_hunter")
+
+  // Resultados SerpAPI
+  siteEncontrado String? @map("site_encontrado")
+
+  // Resultados Apollo — Organization Enrichment
+  apolloOrgId         String? @map("apollo_org_id")
+  telefoneApollo      String? @map("telefone_apollo")
+  linkedinEmpresa     String? @map("linkedin_empresa")
+  descricaoApollo     String? @map("descricao_apollo")
+  cidadeApollo        String? @map("cidade_apollo")
+  estadoApollo        String? @map("estado_apollo")
+  fundadoEmApollo     Int?    @map("fundado_em_apollo")
+  keywordsApollo      String? @map("keywords_apollo")
+  departamentosApollo String? @map("departamentos_apollo")
+
+  // Resultados Apollo
+  emailDecisor    String? @map("email_decisor")
+  cargoDecisor    String? @map("cargo_decisor")
+  linkedinDecisor String? @map("linkedin_decisor")
+  telefoneDecisor String? @map("telefone_decisor")
+  tamanhoEmpresa  String? @map("tamanho_empresa")
+  tecnologias     String? // JSON array serializado
+
+  // Resultados Pipedrive
+  pipedriveOrgId       Int?    @map("pipedrive_org_id")
+  pipedriveDealId      Int?    @map("pipedrive_deal_id")
+  pipedriveDealStage   String? @map("pipedrive_deal_stage")
+  pipedriveResponsavel String? @map("pipedrive_responsavel")
+  isClienteAutoforce   Boolean @default(false) @map("is_cliente_autoforce")
+
+  // Resultados Scrape (HTML do site)
+  cnpjSite      String? @map("cnpj_site")
+  whatsappSite  String? @map("whatsapp_site")
+  emailSite     String? @map("email_site")
+  instagramSite String? @map("instagram_site")
+  facebookSite  String? @map("facebook_site")
+  linkedinSite  String? @map("linkedin_site")
+
+  // Resultados Apify (mantidos para compatibilidade)
+  whatsappApify     String? @map("whatsapp_apify")
+  instagramApify    String? @map("instagram_apify")
+  facebookApify     String? @map("facebook_apify")
+  emailEmpresaApify String? @map("email_empresa_apify")
+
+  // Resultados Hunter
+  emailHunter      String? @map("email_hunter")
+  emailHunterScore Int?    @map("email_hunter_score")
+
+  // Erros por etapa
+  erroPipedrive String? @map("erro_pipedrive")
+  erroSerpapi   String? @map("erro_serpapi")
+  erroScrape    String? @map("erro_scrape")
+  erroApollo    String? @map("erro_apollo")
+  erroApify     String? @map("erro_apify")
+  erroHunter    String? @map("erro_hunter")
+
+  // Anotações livres (pessoas encontradas, observações manuais)
+  anotacoes String?
+
+  // Score de enriquecimento (0–100)
+  scoreEnriquecimento Int @default(0) @map("score_enriquecimento")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pessoas AmostraLeadPessoa[]
+
+  @@map("amostra_leads")
+}
+
+model AmostraLeadPessoa {
+  id             String   @id @default(uuid())
+  leadId         String   @map("lead_id")
+  nome           String
+  email          String?
+  cargo          String?
+  linkedin       String?
+  telefone       String?
+  isPrincipal    Boolean  @default(false) @map("is_principal")
+  apolloPessoaId String?  @map("apollo_pessoa_id")
+  apolloHasEmail Boolean? @map("apollo_has_email")
+  apolloHasPhone Boolean? @map("apollo_has_phone")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  lead AmostraLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("amostra_lead_pessoas")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SearchJob {
+  id             String    @id @default(uuid())
+  brandId        String    @map("brand_id")
+  stateId        String    @map("state_id")
+  status         JobStatus @default(PENDING)
+  totalFound     Int?      @map("total_found")
+  totalProcessed Int?      @map("total_processed")
+  errorMessage   String?   @map("error_message")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  brand Brand @relation(fields: [brandId], references: [id])
+  state State @relation(fields: [stateId], references: [id])
+
+  @@unique([brandId, stateId])
+  @@map("search_jobs")
+}

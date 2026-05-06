@@ -1,0 +1,2 @@
+import { storeEnrichmentService } from './src/services/enrichment/store-enrichment.service';
+(async (

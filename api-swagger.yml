@@ -1,0 +1,1390 @@
+openapi: 3.0.3
+info:
+  title: ATD Workspace Monitor API
+  version: 1.0.0
+  description: API para monitoramento de workspace, performance e gestão de lojas e sites
+  contact:
+    name: ATD Team
+    email: support@atd.com
+
+servers:
+  - url: http://localhost:3000
+    description: Desenvolvimento
+  - url: https://api.atd.com
+    description: Produção
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health Check
+      summary: Verificação de saúde da API
+      description: Endpoint para verificar se a API está funcionando
+      responses:
+        '200':
+          description: API está funcionando
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "UP"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /search-sites/start:
+    post:
+      tags:
+        - Search Sites
+      summary: Iniciar jobs de busca de sites
+      description: Inicia jobs para buscar sites baseado em marcas e estados
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brandIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array de IDs de marcas para buscar. Se não fornecido, busca todas as marcas
+                stateIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array de IDs de estados para buscar. Se não fornecido, busca todos os estados
+              example:
+                brandIds: ["550e8400-e29b-41d4-a716-446655440000"]
+                stateIds: ["550e8400-e29b-41d4-a716-446655440001"]
+      responses:
+        '200':
+          description: Jobs iniciados com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "5 search jobs started successfully. Monitor progress at /admin/queues"
+                  totalCombinations:
+                    type: integer
+                    example: 10
+                  jobsCreated:
+                    type: integer
+                    example: 5
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websites:
+    get:
+      tags:
+        - Websites
+      summary: Lista websites
+      description: Retorna uma lista paginada de websites com filtros e ordenação
+      parameters:
+        - name: page
+          in: query
+          description: Número da página (inicia em 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Número de itens por página (máximo 1000)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: brandId
+          in: query
+          description: Filtrar por ID da marca
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: providerId
+          in: query
+          description: Filtrar por ID do fornecedor
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          description: Buscar texto na URL do website
+          required: false
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Campo para ordenação
+          required: false
+          schema:
+            type: string
+            enum: [avgPerformanceScore, seoScore, downtimeSeconds, avgResponseTime]
+        - name: sortOrder
+          in: query
+          description: Ordem da classificação
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Lista de websites retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Website'
+                  meta:
+                    $ref: '#/components/schemas/WebsiteListMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websites/provider-stats:
+    get:
+      tags:
+        - Websites
+      summary: Estatísticas de websites por fornecedor
+      description: Retorna a quantidade de websites agrupados por fornecedor para gráficos de pizza
+      parameters:
+        - name: includeInactive
+          in: query
+          description: Incluir websites inativos nas estatísticas
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Estatísticas por fornecedor retornadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderStats'
+                  meta:
+                    $ref: '#/components/schemas/ProviderStatsMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websites/provider-metrics:
+    get:
+      tags:
+        - Websites
+      summary: Métricas de performance por fornecedor
+      description: Retorna métricas médias de performance, SEO e tempo de resposta agrupadas por fornecedor de websites
+      parameters:
+        - name: includeInactive
+          in: query
+          description: Incluir websites inativos nos cálculos
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Métricas por fornecedor retornadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderMetrics'
+                  meta:
+                    $ref: '#/components/schemas/ProviderMetricsMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /websites/{id}:
+    put:
+      tags:
+        - Websites
+      summary: Editar website
+      description: Atualiza as informações de um website específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do website a ser atualizado
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: URL do website
+                providerId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: ID do fornecedor (null para remover)
+                brandId:
+                  type: string
+                  format: uuid
+                  description: ID da marca
+                isActive:
+                  type: boolean
+                  description: Status ativo do website
+              example:
+                url: "https://exemplo.com.br"
+                providerId: "550e8400-e29b-41d4-a716-446655440000"
+                brandId: "cc750f1a-62f3-4d0f-9804-6a2616f1a068"
+                isActive: true
+      responses:
+        '200':
+          description: Website atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Website'
+        '400':
+          description: Erro de validação ou URL já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Website não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Websites
+      summary: Excluir website
+      description: Remove um website do sistema. Se o website possui lojas associadas, a associação é removida automaticamente antes da exclusão.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do website a ser excluído
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Website excluído com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Website deleted successfully"
+                  storesUpdated:
+                    type: integer
+                    description: Número de lojas que tiveram a associação com o website removida
+                    example: 3
+        '404':
+          description: Website não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/global-stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Estatísticas globais consolidadas
+      description: Retorna indicadores globais do mercado incluindo número de sites, lojas, fornecedores e médias de performance e SEO
+      parameters:
+        - name: includeInactive
+          in: query
+          description: Incluir websites e lojas inativas nos cálculos
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Estatísticas globais retornadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/GlobalStats'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /brands:
+    get:
+      tags:
+        - Brands
+      summary: Lista marcas com indicadores consolidados
+      description: Retorna uma lista paginada de marcas com indicadores de performance, SEO e tempo de resposta. As métricas são consolidadas diariamente pelo script de consolidação.
+      parameters:
+        - name: page
+          in: query
+          description: Número da página (inicia em 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Número de itens por página (máximo 1000)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: sortBy
+          in: query
+          description: Campo para ordenação
+          required: false
+          schema:
+            type: string
+            enum: [name, avgPerformanceScore, avgSeoScore, avgResponseTime, totalWebsites, activeWebsites]
+            default: name
+        - name: sortOrder
+          in: query
+          description: Ordem da classificação
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: hasMetrics
+          in: query
+          description: Filtrar apenas marcas que possuem métricas
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de marcas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Brand'
+                  meta:
+                    $ref: '#/components/schemas/BrandListMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stores:
+    get:
+      tags:
+        - Stores
+      summary: Lista lojas
+      description: Retorna uma lista paginada de lojas com filtros opcionais. Pode retornar todos os registros para uso em mapas do Google Maps.
+      parameters:
+        - name: page
+          in: query
+          description: Número da página (inicia em 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Número de itens por página (máximo 1000)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: all
+          in: query
+          description: Retorna todos os registros sem paginação (útil para mapas)
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: brandId
+          in: query
+          description: Filtrar por ID da marca
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: stateId
+          in: query
+          description: Filtrar por ID do estado
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: cityId
+          in: query
+          description: Filtrar por ID da cidade
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: groupId
+          in: query
+          description: Filtrar por ID do grupo
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: isActive
+          in: query
+          description: Filtrar por status ativo
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de lojas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Store'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /providers:
+    get:
+      tags:
+        - Providers
+      summary: Lista fornecedores de websites
+      description: Retorna uma lista paginada de fornecedores com filtros e ordenação
+      parameters:
+        - name: page
+          in: query
+          description: Número da página (inicia em 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Número de itens por página (máximo 1000)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: search
+          in: query
+          description: Buscar texto no nome do fornecedor
+          required: false
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Campo para ordenação
+          required: false
+          schema:
+            type: string
+            enum: [name, avgPerformanceScore, avgSeoScore, avgDowntimeSeconds]
+            default: name
+        - name: sortOrder
+          in: query
+          description: Ordem da classificação
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Lista de fornecedores retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Provider'
+                  meta:
+                    $ref: '#/components/schemas/ProviderListMeta'
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Providers
+      summary: Criar fornecedor
+      description: Cria um novo fornecedor de websites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Nome do fornecedor
+                slug:
+                  type: string
+                  minLength: 1
+                  description: Slug do fornecedor (único)
+              example:
+                name: "WordPress"
+                slug: "wordpress"
+      responses:
+        '201':
+          description: Fornecedor criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Provider'
+        '400':
+          description: Erro de validação ou nome/slug já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /providers/{id}:
+    put:
+      tags:
+        - Providers
+      summary: Editar fornecedor
+      description: Atualiza as informações de um fornecedor de websites
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do fornecedor a ser atualizado
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Nome do fornecedor
+                slug:
+                  type: string
+                  minLength: 1
+                  description: Slug do fornecedor
+              example:
+                name: "WordPress Personalizado"
+                slug: "wordpress-personalizado"
+      responses:
+        '200':
+          description: Fornecedor atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Provider'
+        '400':
+          description: Erro de validação ou nome/slug já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Fornecedor não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/queues:
+    get:
+      tags:
+        - Admin
+      summary: Painel de monitoramento de filas
+      description: Interface web para monitorar o status das filas de processamento
+      responses:
+        '200':
+          description: Painel de filas carregado
+          content:
+            text/html:
+              schema:
+                type: string
+
+components:
+  schemas:
+    Store:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único da loja
+        name:
+          type: string
+          description: Nome da loja
+        brandId:
+          type: string
+          format: uuid
+          description: ID da marca
+        groupId:
+          type: string
+          format: uuid
+          description: ID do grupo
+        stateId:
+          type: string
+          format: uuid
+          description: ID do estado
+        cityId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID da cidade
+        websiteId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do website
+        latitude:
+          type: number
+          format: float
+          nullable: true
+          description: Latitude da localização
+        longitude:
+          type: number
+          format: float
+          nullable: true
+          description: Longitude da localização
+        rating:
+          type: number
+          format: float
+          nullable: true
+          description: Avaliação da loja
+        reviews:
+          type: integer
+          nullable: true
+          description: Número de avaliações
+        phone:
+          type: string
+          nullable: true
+          description: Telefone da loja
+        isActive:
+          type: boolean
+          description: Status ativo da loja
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de última atualização
+        brand:
+          $ref: '#/components/schemas/BrandInfo'
+        group:
+          $ref: '#/components/schemas/GroupInfo'
+        state:
+          $ref: '#/components/schemas/StateInfo'
+        city:
+          $ref: '#/components/schemas/CityInfo'
+        website:
+          $ref: '#/components/schemas/WebsiteInfo'
+
+    BrandInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+
+    GroupInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+
+    StateInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        region:
+          type: string
+          enum: [NORTE, NORDESTE, CENTRO_OESTE, SUDESTE, SUL]
+
+    CityInfo:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isCapital:
+          type: boolean
+
+    WebsiteInfo:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        isActive:
+          type: boolean
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total de registros
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de itens por página
+        totalPages:
+          type: integer
+          description: Total de páginas
+        hasNext:
+          type: boolean
+          description: Indica se há próxima página
+        hasPrev:
+          type: boolean
+          description: Indica se há página anterior
+
+    ProviderStats:
+      type: object
+      properties:
+        providerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do fornecedor (null para sites sem fornecedor)
+        providerName:
+          type: string
+          description: Nome do fornecedor
+        providerSlug:
+          type: string
+          description: Slug do fornecedor
+        count:
+          type: integer
+          description: Quantidade de websites do fornecedor
+      example:
+        providerId: "550e8400-e29b-41d4-a716-446655440000"
+        providerName: "WordPress"
+        providerSlug: "wordpress"
+        count: 45
+
+    Website:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único do website
+        url:
+          type: string
+          description: URL do website
+        providerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do fornecedor
+        brandId:
+          type: string
+          format: uuid
+          description: ID da marca
+        isActive:
+          type: boolean
+          description: Status ativo do website
+        trafficSocial:
+          type: integer
+          nullable: true
+          description: Tráfego de redes sociais
+        trafficPaidReferrals:
+          type: integer
+          nullable: true
+          description: Tráfego de referências pagas
+        trafficMail:
+          type: integer
+          nullable: true
+          description: Tráfego de email
+        trafficReferrals:
+          type: integer
+          nullable: true
+          description: Tráfego de referências
+        trafficSearch:
+          type: integer
+          nullable: true
+          description: Tráfego de busca
+        trafficDirect:
+          type: integer
+          nullable: true
+          description: Tráfego direto
+        avgPerformanceScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de performance
+        avgMonthlyVisits:
+          type: integer
+          nullable: true
+          description: Visitas mensais médias
+        avgResponseTime:
+          type: integer
+          nullable: true
+          description: Tempo de resposta médio
+        downtimeSeconds:
+          type: integer
+          nullable: true
+          description: Tempo de inatividade em segundos
+        seoScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score de SEO
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de última atualização
+        brand:
+          $ref: '#/components/schemas/BrandInfo'
+        provider:
+          $ref: '#/components/schemas/ProviderInfo'
+
+    ProviderInfo:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+
+    WebsiteListMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total de registros
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de itens por página
+        totalPages:
+          type: integer
+          description: Total de páginas
+        hasNext:
+          type: boolean
+          description: Indica se há próxima página
+        hasPrev:
+          type: boolean
+          description: Indica se há página anterior
+        sortBy:
+          type: string
+          description: Campo de ordenação usado
+        sortOrder:
+          type: string
+          description: Ordem de classificação usada
+
+    Brand:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único da marca
+        name:
+          type: string
+          description: Nome da marca
+        slug:
+          type: string
+          description: Slug da marca
+        avgPerformanceScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de performance (consolidado diariamente)
+        avgSeoScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de SEO (consolidado diariamente)
+        avgResponseTime:
+          type: integer
+          nullable: true
+          description: Tempo médio de resposta em ms (consolidado diariamente)
+        totalWebsites:
+          type: integer
+          nullable: true
+          description: Total de websites da marca
+        activeWebsites:
+          type: integer
+          nullable: true
+          description: Websites ativos da marca
+        metricsUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Data da última atualização das métricas consolidadas
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação da marca
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de última atualização da marca
+        counts:
+          type: object
+          description: Contadores relacionados à marca
+          properties:
+            websites:
+              type: integer
+              description: Número total de websites
+            stores:
+              type: integer
+              description: Número total de lojas
+            searchJobs:
+              type: integer
+              description: Número total de jobs de busca
+      example:
+        id: "cc750f1a-62f3-4d0f-9804-6a2616f1a068"
+        name: "Honda"
+        slug: "honda"
+        avgPerformanceScore: 58.95
+        avgSeoScore: 97.6
+        avgResponseTime: 948
+        totalWebsites: 23
+        activeWebsites: 23
+        metricsUpdatedAt: "2025-10-24T19:30:51.391Z"
+        createdAt: "2025-10-24T17:34:14.536Z"
+        updatedAt: "2025-10-24T19:30:51.391Z"
+        counts:
+          websites: 23
+          stores: 15
+          searchJobs: 5
+
+    GlobalStats:
+      type: object
+      properties:
+        metrics:
+          type: object
+          properties:
+            websites:
+              type: integer
+              description: Total de websites
+            stores:
+              type: integer
+              description: Total de lojas
+            providers:
+              type: integer
+              description: Total de fornecedores
+            avgPerformanceScore:
+              type: number
+              format: float
+              nullable: true
+              description: Score médio de performance do mercado
+            avgSeoScore:
+              type: number
+              format: float
+              nullable: true
+              description: Score médio de SEO do mercado
+            avgResponseTime:
+              type: integer
+              nullable: true
+              description: Tempo médio de resposta do mercado (ms)
+            avgMonthlyVisits:
+              type: integer
+              nullable: true
+              description: Visitas mensais médias do mercado
+        filters:
+          type: object
+          properties:
+            includeInactive:
+              type: boolean
+              description: Se dados inativos foram incluídos
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Timestamp da última atualização
+      example:
+        metrics:
+          websites: 40
+          stores: 47
+          providers: 7
+          avgPerformanceScore: 58.95
+          avgSeoScore: 97.6
+          avgResponseTime: 948
+          avgMonthlyVisits: null
+        filters:
+          includeInactive: false
+        lastUpdated: "2025-10-24T20:30:00.000Z"
+
+    BrandListMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total de registros
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de itens por página
+        totalPages:
+          type: integer
+          description: Total de páginas
+        hasNext:
+          type: boolean
+          description: Indica se há próxima página
+        hasPrev:
+          type: boolean
+          description: Indica se há página anterior
+        sortBy:
+          type: string
+          description: Campo de ordenação usado
+        sortOrder:
+          type: string
+          description: Ordem de classificação usada
+
+    ProviderStatsMeta:
+      type: object
+      properties:
+        totalWebsites:
+          type: integer
+          description: Total de websites
+        totalProviders:
+          type: integer
+          description: Total de fornecedores
+        includeInactive:
+          type: boolean
+          description: Se websites inativos foram incluídos
+
+    ProviderMetrics:
+      type: object
+      properties:
+        providerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do fornecedor (null para sites sem fornecedor)
+        providerName:
+          type: string
+          description: Nome do fornecedor
+        providerSlug:
+          type: string
+          description: Slug do fornecedor
+        totalWebsites:
+          type: integer
+          description: Total de websites do fornecedor
+        avgPerformanceScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de performance do fornecedor
+        avgSeoScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de SEO do fornecedor
+        avgResponseTime:
+          type: integer
+          nullable: true
+          description: Tempo médio de resposta do fornecedor (ms)
+        websitesWithPerformanceData:
+          type: integer
+          description: Websites com dados de performance
+        websitesWithSeoData:
+          type: integer
+          description: Websites com dados de SEO
+        websitesWithResponseTimeData:
+          type: integer
+          description: Websites com dados de tempo de resposta
+      example:
+        providerId: "550e8400-e29b-41d4-a716-446655440000"
+        providerName: "WordPress"
+        providerSlug: "wordpress"
+        totalWebsites: 15
+        avgPerformanceScore: 68.5
+        avgSeoScore: 89.2
+        avgResponseTime: 1250
+        websitesWithPerformanceData: 12
+        websitesWithSeoData: 14
+        websitesWithResponseTimeData: 13
+
+    ProviderMetricsMeta:
+      type: object
+      properties:
+        totalProviders:
+          type: integer
+          description: Total de fornecedores
+        totalWebsites:
+          type: integer
+          description: Total de websites
+        includeInactive:
+          type: boolean
+          description: Se websites inativos foram incluídos
+
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único do fornecedor
+        name:
+          type: string
+          description: Nome do fornecedor
+        slug:
+          type: string
+          description: Slug do fornecedor
+        avgPerformanceScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de performance dos websites do fornecedor
+        avgDowntimeSeconds:
+          type: integer
+          nullable: true
+          description: Tempo médio de inatividade em segundos
+        avgSeoScore:
+          type: number
+          format: float
+          nullable: true
+          description: Score médio de SEO dos websites do fornecedor
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de última atualização
+        _count:
+          type: object
+          description: Contadores relacionados ao fornecedor
+          properties:
+            websites:
+              type: integer
+              description: Número total de websites
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        name: "WordPress"
+        slug: "wordpress"
+        avgPerformanceScore: 68.5
+        avgDowntimeSeconds: 120
+        avgSeoScore: 89.2
+        createdAt: "2025-10-24T17:34:14.536Z"
+        updatedAt: "2025-10-24T19:30:51.391Z"
+        _count:
+          websites: 15
+
+    ProviderListMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total de registros
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de itens por página
+        totalPages:
+          type: integer
+          description: Total de páginas
+        hasNext:
+          type: boolean
+          description: Indica se há próxima página
+        hasPrev:
+          type: boolean
+          description: Indica se há página anterior
+        sortBy:
+          type: string
+          description: Campo de ordenação usado
+        sortOrder:
+          type: string
+          description: Ordem de classificação usada
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Mensagem de erro
+
+tags:
+  - name: Health Check
+    description: Endpoints para verificação de saúde da API
+  - name: Search Sites
+    description: Endpoints para gerenciar busca de sites
+  - name: Stores
+    description: Endpoints para gerenciar lojas
+  - name: Websites
+    description: Endpoints para gerenciar websites e estatísticas
+  - name: Brands
+    description: Endpoints para gerenciar marcas e seus indicadores
+  - name: Dashboard
+    description: Endpoints para estatísticas e indicadores globais
+  - name: Providers
+    description: Endpoints para gerenciar fornecedores de websites
+  - name: Admin
+    description: Endpoints administrativos
