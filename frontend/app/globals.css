@@ -1,0 +1,111 @@
+@import "./design-system/tokens.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Autoforce brand colors */
+  --color-autoforce-50:  var(--autoforce-50);
+  --color-autoforce-100: var(--autoforce-100);
+  --color-autoforce-200: var(--autoforce-200);
+  --color-autoforce-300: var(--autoforce-300);
+  --color-autoforce-400: var(--autoforce-400);
+  --color-autoforce-500: var(--autoforce-500);
+  --color-autoforce-600: var(--autoforce-600);
+  --color-autoforce-700: var(--autoforce-700);
+  --color-autoforce-800: var(--autoforce-800);
+  --color-autoforce-900: var(--autoforce-900);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Autoforce light theme */
+:root {
+  --background: var(--base-white);
+  --foreground: var(--slate-900);
+  --card: var(--base-white);
+  --card-foreground: var(--slate-900);
+  --popover: var(--base-white);
+  --popover-foreground: var(--slate-900);
+  --primary: var(--autoforce-600);         /* #3754E2 */
+  --primary-foreground: var(--base-white);
+  --secondary: var(--slate-100);
+  --secondary-foreground: var(--slate-600);
+  --muted: var(--slate-100);
+  --muted-foreground: var(--slate-500);
+  --accent: var(--autoforce-50);           /* #F0F4FE */
+  --accent-foreground: var(--autoforce-800);
+  --destructive: var(--red-600);           /* #DC2626 */
+  --border: var(--slate-200);
+  --input: var(--slate-300);
+  --ring: var(--autoforce-600);            /* #3754E2 */
+  --chart-1: oklch(0.55 0.28 264);
+  --chart-2: oklch(0.65 0.22 200);
+  --chart-3: oklch(0.70 0.18 140);
+  --chart-4: oklch(0.75 0.18 50);
+  --chart-5: oklch(0.65 0.22 340);
+  --radius: var(--design-card-border-radius); /* 8px */
+  --sidebar: var(--base-white);
+  --sidebar-foreground: var(--slate-800);
+  --sidebar-primary: var(--autoforce-600);
+  --sidebar-primary-foreground: var(--autoforce-600);
+  --sidebar-accent: var(--autoforce-50);
+  --sidebar-accent-foreground: var(--autoforce-700);
+  --sidebar-border: var(--slate-200);
+  --sidebar-ring: var(--autoforce-600);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--typography-text-font-family);
+  }
+  html {
+    @apply font-sans;
+  }
+}

@@ -1,0 +1,112 @@
+/* ============================================================
+   AUTOFORCE DESIGN SYSTEM — CSS Tokens
+   Extraído do Autódromo
+   ============================================================ */
+
+:root {
+
+  /* ----------------------------------------------------------
+     CORES — Paleta Autoforce (Brand)
+  ---------------------------------------------------------- */
+  --autoforce-900: #242F84;
+  --autoforce-800: #2531A8;
+  --autoforce-700: #273BCE;
+  --autoforce-600: #3754E2;
+  --autoforce-500: #456CEC;
+  --autoforce-400: #6892F2;
+  --autoforce-300: #98B7F8;
+  --autoforce-200: #C2D3FB;
+  --autoforce-100: #DDE6FC;
+  --autoforce-50:  #F0F4FE;
+  --autoforce-600-90: #3754E2E5;
+  --autoforce-500-90: #456CECE5;
+
+  /* ----------------------------------------------------------
+     CORES — Base
+  ---------------------------------------------------------- */
+  --base-white:       #FFFFFF;
+  --base-black:       #000000;
+  --base-transparent: #FFFFFF00;
+
+  /* ----------------------------------------------------------
+     CORES — Slate (Neutros)
+  ---------------------------------------------------------- */
+  --slate-50:     #F8FAFC;
+  --slate-100:    #F1F5F9;
+  --slate-200:    #E2E8F0;
+  --slate-300:    #CBD5E1;
+  --slate-400:    #94A3B8;
+  --slate-500:    #64748B;
+  --slate-600:    #475569;
+  --slate-700:    #334155;
+  --slate-800:    #1E293B;
+  --slate-900:    #0F172A;
+  --slate-100-80: #F1F5F9CC;
+
+  /* ----------------------------------------------------------
+     CORES — Red (Erro / Destrutivo)
+  ---------------------------------------------------------- */
+  --red-50:  #FEF2F2;
+  --red-100: #FEE2E2;
+  --red-200: #FECACA;
+  --red-300: #FCA5A5;
+  --red-400: #F87171;
+  --red-450: #F45B5B;
+  --red-500: #EF4444;
+  --red-600: #DC2626;
+  --red-700: #B91C1C;
+  --red-800: #991B1B;
+  --red-900: #7F1D1D;
+
+  /* ----------------------------------------------------------
+     CORES — Yellow (Atenção / Warning)
+  ---------------------------------------------------------- */
+  --yellow-50:  #FEFCE8;
+  --yellow-100: #FEF9C3;
+  --yellow-200: #FEF08A;
+  --yellow-300: #FDE047;
+  --yellow-400: #FACC15;
+  --yellow-500: #EAB308;
+  --yellow-600: #CA8A04;
+  --yellow-700: #A16207;
+  --yellow-800: #854D0E;
+  --yellow-900: #713F12;
+
+  /* ----------------------------------------------------------
+     CORES — Green (Sucesso)
+  ---------------------------------------------------------- */
+  --green-50:  #F0FDF4;
+  --green-100: #DCFCE7;
+  --green-200: #BBF7D0;
+  --green-300: #86EFAC;
+  --green-400: #4ADE80;
+  --green-500: #22C55E;
+  --green-600: #16A34A;
+  --green-700: #15803D;
+  --green-800: #166534;
+  --green-900: #14532D;
+
+  /* ----------------------------------------------------------
+     DESIGN — Border Radius
+  ---------------------------------------------------------- */
+  --design-button-border-radius: 6px;
+  --design-card-border-radius:   8px;
+
+  /* ----------------------------------------------------------
+     DESIGN — Border Width
+  ---------------------------------------------------------- */
+  --design-button-border-width: 1px;
+  --design-card-border-width:   1px;
+
+  /* ----------------------------------------------------------
+     TIPOGRAFIA — Famílias
+  ---------------------------------------------------------- */
+  --typography-heading-font-family:    "Poppins", sans-serif;
+  --typography-heading-font-weight:    600;
+  --typography-subheading-font-family: "Poppins", sans-serif;
+  --typography-title-font-family:      "Poppins", sans-serif;
+  --typography-title-font-weight:      600;
+  --typography-text-font-family:       "Poppins", sans-serif;
+  --typography-text-font-weight:       400;
+
+}
